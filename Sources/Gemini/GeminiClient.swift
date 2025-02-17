@@ -9,20 +9,16 @@ public class GeminiClient {
     private let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
     private lazy var sslContext: NIOSSLContext = {
-        var config = TLSConfiguration.forClient()
+        var config = TLSConfiguration.makeClientConfiguration()
         config.certificateVerification = .none
         return try! NIOSSLContext(configuration: config)
     }()
 
-    private lazy var bootstrap: ClientBootstrap = {
-        return ClientBootstrap(group: group)
-            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+    private lazy var bootstrap: NIOClientTCPBootstrap = {
+        let tlsProvider = try! NIOSSLClientTLSProvider<ClientBootstrap>(context: sslContext, serverHostname: nil)
+        return NIOClientTCPBootstrap(ClientBootstrap(group: group), tls: tlsProvider).enableTLS()
             .channelInitializer { channel in
-                let sslHandler = try! NIOSSLClientHandler(context: self.sslContext, serverHostname: nil)
-
-                return channel.pipeline.addHandler(sslHandler).flatMap {
-                    channel.pipeline.addHandlers(self, position: .after(sslHandler))
-                }
+                return channel.pipeline.addHandler(self, name: "gemini")
             }
     }()
 
