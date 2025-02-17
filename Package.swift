@@ -7,8 +7,8 @@ let package = Package(
     name: "Gemini",
     platforms: [.iOS(.v12), .macOS(.v10_14)],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio", from: "2.0.0"),
-        .package(url: "https://github.com/apple/swift-nio-ssl", from: "2.0.0"),
+        .package(url: "https://github.com/apple/swift-nio", from: "2.81.0"),
+        .package(url: "https://github.com/apple/swift-nio-ssl", from: "2.29.0"),
     ],
     targets: [
         .target(
