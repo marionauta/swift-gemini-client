@@ -3,8 +3,8 @@ import NIO
 import NIOSSL
 
 public class GeminiClient {
-    private var rawResponse: String = ""
-    private var lastResponse: Response? = nil
+    private var rawResponse: Data?
+    private var lastResponse: GeminiResponse? = nil
 
     private let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
@@ -63,7 +63,7 @@ public class GeminiClient {
         }
     }
 
-    private func reactTo(response: Response, originalRequest: String) throws {
+    private func reactTo(response: GeminiResponse, originalRequest: String) throws {
         if response.isInput {
             print("Input: \(response.header.meta)")
             print("> ", terminator: "")
@@ -71,14 +71,18 @@ public class GeminiClient {
             try request(address: "\(originalRequest)?\(answer)")
 
         } else if response.isRedirect {
-            try request(address: response.header.meta)
+            if response.header.meta.isEmpty {
+                print("ERROR: Invalid redirect (empty)")
+            } else {
+                try request(address: response.header.meta)
+            }
 
         } else if response.isError {
-            let message = "Error \(response.header.status): \(response.header.meta)"
+            let message = "ERROR: (\(response.header.status)) \(response.header.meta)"
             print(message)
 
-        } else if response.isOk {
-            print(response.body ?? ".")
+        } else if response.isOk, let body = response.body, let body = String(data: body, encoding: .utf8) {
+            print(body)
         }
     }
 }
@@ -92,16 +96,20 @@ extension GeminiClient: ChannelInboundHandler {
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var buffer = unwrapInboundIn(data)
 
-        if let raw = buffer.readString(length: buffer.readableBytes) {
-            rawResponse = rawResponse + raw
+        if let raw = buffer.readBytes(length: buffer.readableBytes) {
+            if let rawResponse {
+                self.rawResponse = rawResponse + raw
+            } else {
+                self.rawResponse = Data(raw)
+            }
         }
 
         context.close(promise: nil)
     }
 
     public func channelInactive(context: ChannelHandlerContext) {
-        if let response = Response(rawResponse) {
-            rawResponse = ""
+        if let raw = rawResponse, let response = GeminiResponse(raw) {
+            rawResponse = nil
             lastResponse = response
         }
 

@@ -1,6 +1,4 @@
 import Foundation
-import NIO
-import NIOSSL
 
 let handler = GeminiClient()
 
