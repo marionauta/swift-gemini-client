@@ -1,3 +1,5 @@
-# Gemini
+# swift-gemini-client
 
-A description of this package.
+A very simple, command line [Gemini protocol][gemini] client written in Swift.
+
+[gemini]: https://geminiprotocol.net/
